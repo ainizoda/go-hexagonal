@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	inHttp "github.com/ainizoda/go-hexagonal/internal/adapters/in/http"
 	"github.com/ainizoda/go-hexagonal/internal/adapters/in/http/middleware"
 )
 
@@ -15,7 +14,7 @@ type Server struct {
 	srv *http.Server
 }
 
-func NewServer(port int, routes []inHttp.Route, logger *log.Logger) *Server {
+func NewServer(port int, routes []Route, logger *log.Logger) *Server {
 	mux := http.NewServeMux()
 
 	for _, r := range routes {

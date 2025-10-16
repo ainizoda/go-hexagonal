@@ -5,7 +5,6 @@ import (
 
 	inHttp "github.com/ainizoda/go-hexagonal/internal/adapters/in/http"
 	"github.com/ainizoda/go-hexagonal/internal/adapters/in/http/handlers"
-	"github.com/ainizoda/go-hexagonal/internal/adapters/in/http/server"
 	"github.com/ainizoda/go-hexagonal/internal/adapters/out/memory"
 	"github.com/ainizoda/go-hexagonal/internal/domain/user"
 )
@@ -19,7 +18,7 @@ func main() {
 
 	routes := []inHttp.Route{uh}
 
-	server := server.NewServer(8080, routes, logger)
+	server := inHttp.NewServer(8080, routes, logger)
 
 	logger.Println("Server successfully started at localhost:8080")
 
