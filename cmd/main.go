@@ -17,7 +17,6 @@ func main() {
 	uh := handlers.NewUserHandler(us)
 
 	routes := []inHttp.Route{uh}
-
 	server := inHttp.NewServer(8080, routes, logger)
 
 	logger.Println("Server successfully started at localhost:8080")
