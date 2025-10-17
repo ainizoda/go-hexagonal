@@ -8,8 +8,6 @@ import (
 
 	"github.com/ainizoda/go-hexagonal/internal/adapters/in/http/dto"
 	"github.com/ainizoda/go-hexagonal/internal/domain/user"
-
-	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -59,13 +57,13 @@ func (uc *UserHandler) Add(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
-	usr := &user.Model{
-		ID:        uuid.NewString(),
-		LastName:  data.LastName,
-		FirstName: data.FirstName,
-		Roles:     data.Roles,
-		Email:     data.Email,
+
+	usr, err := user.New(data.FirstName, data.LastName, data.Email, data.Roles)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+
 	if err := uc.svc.Add(context.Background(), usr); err != nil {
 		if errors.Is(err, user.ErrUserAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
