@@ -32,12 +32,11 @@ func main() {
 	routes := []inHttp.Route{uh}
 	server := inHttp.NewServer(cfg.Port, routes, lg)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-
 	lg := logger.New(cfg.Env)
 	lg.Info(context.Background(), fmt.Sprintf("server started at localhost:%d", cfg.Port))
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -46,7 +45,6 @@ func main() {
 			log.Fatalf("error shutting down server: %v", err)
 		}
 	}()
-
 	if err := server.Start(); err != nil {
 		log.Fatalf("error starting server: %s", err.Error())
 	}
