@@ -5,6 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"time"
 
 	inHttp "github.com/ainizoda/go-hexagonal/internal/adapters/in/http"
 	"github.com/ainizoda/go-hexagonal/internal/adapters/in/http/handlers"
@@ -22,8 +25,6 @@ func main() {
 		log.Fatalf("error reading config: %v", err)
 	}
 
-	lg := logger.New(cfg.Env)
-
 	ur := memory.NewUserRepo()
 	us := user.NewService(ur)
 	uh := handlers.NewUserHandler(us)
@@ -31,7 +32,20 @@ func main() {
 	routes := []inHttp.Route{uh}
 	server := inHttp.NewServer(cfg.Port, routes, lg)
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	lg := logger.New(cfg.Env)
 	lg.Info(context.Background(), fmt.Sprintf("server started at localhost:%d", cfg.Port))
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := server.Stop(shutdownCtx); err != nil {
+			log.Fatalf("error shutting down server: %v", err)
+		}
+	}()
 
 	if err := server.Start(); err != nil {
 		log.Fatalf("error starting server: %s", err.Error())
