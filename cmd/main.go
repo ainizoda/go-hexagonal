@@ -4,9 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	inHttp "github.com/ainizoda/go-hexagonal/internal/adapters/in/http"
@@ -15,37 +15,61 @@ import (
 	"github.com/ainizoda/go-hexagonal/internal/config"
 	"github.com/ainizoda/go-hexagonal/internal/domain/user"
 	"github.com/ainizoda/go-hexagonal/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
-	envPath := flag.String("env", ".env", "env path")
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	envPath := flag.String("env", ".env", "path to env file")
 	flag.Parse()
+
 	cfg, err := config.ParseConfig(*envPath)
 	if err != nil {
-		log.Fatalf("error reading config: %v", err)
+		return fmt.Errorf("error reading config: %w", err)
 	}
-
-	ur := memory.NewUserRepo()
-	us := user.NewService(ur)
-	uh := handlers.NewUserHandler(us)
 
 	lg := logger.New(cfg.Env)
-	routes := []inHttp.Route{uh}
+
+	userRepo := memory.NewUserRepo()
+	userService := user.NewService(userRepo)
+	userHandler := handlers.NewUserHandler(userService)
+
+	routes := []inHttp.Route{userHandler}
 	server := inHttp.NewServer(cfg.Port, routes, lg)
 
-	lg.Info(context.Background(), fmt.Sprintf("server started at localhost:%d", cfg.Port))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
+	lg.Info(ctx, "server starting", zap.Int("port", cfg.Port))
+
+	// Start server in background
+	errCh := make(chan error, 1)
 	go func() {
-		<-ctx.Done()
+		errCh <- server.Start()
+	}()
+
+	select {
+	case <-ctx.Done():
+		lg.Info(ctx, "shutdown signal received, stopping server...")
+
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
 		if err := server.Stop(shutdownCtx); err != nil {
-			log.Fatalf("error shutting down server: %v", err)
+			return fmt.Errorf("error shutting down server: %w", err)
 		}
-	}()
-	if err := server.Start(); err != nil {
-		log.Fatalf("error starting server: %s", err.Error())
+		lg.Info(ctx, "server stopped gracefully")
+	case err := <-errCh:
+		if err != nil {
+			return fmt.Errorf("server error: %w", err)
+		}
 	}
+
+	return nil
 }
