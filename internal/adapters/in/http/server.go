@@ -2,19 +2,19 @@ package http
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/ainizoda/go-hexagonal/internal/adapters/in/http/middleware"
+	"github.com/ainizoda/go-hexagonal/pkg/logger"
 )
 
 type Server struct {
 	srv *http.Server
 }
 
-func NewServer(port int, routes []Route, logger *log.Logger) *Server {
+func NewServer(port int, routes []Route, logger *logger.L) *Server {
 	mux := http.NewServeMux()
 
 	for _, r := range routes {

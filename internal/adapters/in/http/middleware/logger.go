@@ -1,12 +1,15 @@
 package middleware
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/ainizoda/go-hexagonal/pkg/logger"
+	"github.com/google/uuid"
 )
 
-func LoggingMiddleware(logger *log.Logger) func(http.Handler) http.Handler {
+func LoggingMiddleware(lg *logger.L) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -15,7 +18,8 @@ func LoggingMiddleware(logger *log.Logger) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(lw, r)
 
-			logger.Printf("%s %s %d %s", r.Method, r.URL.Path, lw.statusCode, time.Since(start))
+			ctx := logger.WithRequestID(r.Context(), uuid.NewString())
+			lg.Debug(ctx, fmt.Sprintf("%s %s %d %s", r.Method, r.URL.Path, lw.statusCode, time.Since(start)))
 		})
 	}
 }
