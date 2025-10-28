@@ -29,10 +29,10 @@ func main() {
 	us := user.NewService(ur)
 	uh := handlers.NewUserHandler(us)
 
+	lg := logger.New(cfg.Env)
 	routes := []inHttp.Route{uh}
 	server := inHttp.NewServer(cfg.Port, routes, lg)
 
-	lg := logger.New(cfg.Env)
 	lg.Info(context.Background(), fmt.Sprintf("server started at localhost:%d", cfg.Port))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
